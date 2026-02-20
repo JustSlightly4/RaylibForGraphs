@@ -25,7 +25,8 @@
 *   Copyright (c) 2013-2025 Ramon Santamaria (@raysan5)
 *
 ********************************************************************************************/
-
+//To Compile on Windows: g++ -Wall -std=c++17 -I./WindowsLibrary main.cpp -o main.exe ./WindowsLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
+//To Compile on Linux: g++ -Wall -std=c++17 -I./LinuxLibrary main.cpp -o main ./LinuxLibrary/libraylib.a -lGL -lm -lpthread -ldl -lrt -lX11
 #include "raylib.h"
 
 //------------------------------------------------------------------------------------
