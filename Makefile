@@ -7,14 +7,14 @@ ifeq ($(OS),Windows_NT)
     ifneq (,$(findstring MINGW,$(UNAME_S)))
         # MinGW
         CXX = g++
-        CXXFLAGS = -Wall -std=c++17 -I./WindowsLibrary UIDrawer.cpp Buttons.cpp
-        LIBS = ./WindowsLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
+        CXXFLAGS = -Wall -std=c++17 -I./WindowsMingwLibrary UIDrawer.cpp Buttons.cpp
+        LIBS = ./WindowsMingwLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
 
     else ifneq (,$(findstring CYGWIN,$(UNAME_S)))
         # Cygwin
         CXX = g++
-        CXXFLAGS = -Wall -std=c++17 -I./WindowsLibrary UIDrawer.cpp Buttons.cpp
-        LIBS = ./WindowsLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
+        CXXFLAGS = -Wall -std=c++17 -I./WindowsCygwinLibrary UIDrawer.cpp Buttons.cpp
+        LIBS = ./WindowsCygwinLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
 
     endif
 
