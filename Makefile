@@ -33,7 +33,6 @@ WEB_OUTPUT = index.html
 # ASYNCIFY is required for the main loop to work in browsers
 EM_FLAGS = -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB \
            -s FORCE_FILESYSTEM=1 \
-           --shell-file $(RAYLIB_PATH)/shell.html \
            --preload-file textures@/textures \
            --preload-file fonts@/fonts
 
@@ -57,7 +56,7 @@ web: $(SRC)
 
 # Local Server: Run the web version locally
 serve:
-	python -m http.server 8080
+	emrun --port 8080 index.html
 
 # Clean project files
 clean:
