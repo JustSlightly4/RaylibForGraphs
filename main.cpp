@@ -8,6 +8,7 @@
 //To build raylib and compile main: make
 //To delete main: make clean
 //To delete main and the compiled raylib library: make clean-all
+//#include <GLFW/glfw3.h>
 #include <memory>
 #include "raylib.h"
 #include "UIDrawer.h"
