@@ -1,6 +1,7 @@
-//To Compile on Windows with Mingw: g++ -Wall -std=c++17 -I./WindowsMingwLibrary UIDrawer.cpp Buttons.cpp main.cpp -o main.exe ./WindowsMingwLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
-//To Compile on Windows with Cygwin: g++ -Wall -std=c++17 -I./WindowsCygwinLibrary UIDrawer.cpp Buttons.cpp main.cpp -o main.exe ./WindowsCygwinLibrary/libraylib.a -lopengl32 -lgdi32 -lwinmm
-//To Compile on Linux: g++ -Wall -std=c++17 -I./LinuxLibrary UIDrawer.cpp Buttons.cpp main.cpp -o main ./LinuxLibrary/libraylib.a -lGL -lm -lpthread -ldl -lrt -lX11
+//***FIRST YOU NEED TO COMPILE RAYLIB WITH: make -C raylib/src PLATFORM=PLATFORM_DESKTOP
+//**IF YOU MESS IT UP OR SWITCH PLATFORMS USE: make -C raylib/src clean
+//To Compile on Windows: g++ -Wall -std=c++17 -I./raylib/src UIDrawer.cpp Buttons.cpp main.cpp -o main.exe ./raylib/src/libraylib.a -lopengl32 -lgdi32 -lwinmm
+//To Compile on Linux: g++ -Wall -std=c++17 -I./raylib/src UIDrawer.cpp Buttons.cpp main.cpp -o main ./raylib/src/libraylib.a -lGL -lm -lpthread -ldl -lrt -lX11
 #include <memory>
 #include "raylib.h"
 #include "UIDrawer.h"
