@@ -9,6 +9,11 @@
 //To delete main: make clean
 //To delete main and the compiled raylib library: make clean-all
 //#include <GLFW/glfw3.h>
+
+//Web Instructions
+//To Compile raylib library: make -C raylib/src PLATFORM=PLATFORM_WEB -B
+//To Compile project to WebAssembly:  em++ -Wall -std=c++17 -I./raylib/src UIDrawer.cpp Buttons.cpp main.cpp -o index.html ./raylib/src/libraylib.web.a -s USE_GLFW=3 -s ASYNCIFY -DPLATFORM_WEB --shell-file ./raylib/src/shell.html -s FORCE_FILESYSTEM=1 --preload-file textures@/textures --preload-file fonts@/fonts
+//To Run the WebAssembly project locally: emrun --port 8080 index.html
 #include <memory>
 #include "raylib.h"
 #include "UIDrawer.h"
