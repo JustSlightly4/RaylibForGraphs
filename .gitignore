@@ -1,0 +1,6 @@
+# Ignore the entire raylib folder
+raylib/
+
+# Ignore .exe and .out files
+/*.exe
+/*.out
