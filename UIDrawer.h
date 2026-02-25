@@ -57,6 +57,9 @@ class UIDrawer {
 
       };
 
+      std::unordered_map<std::string, RenderTexture2D> textCache;
+      DebounceFlag resetCache;
+
       //Mutable
       Vector2 screenDimensions;
       Vector2 prevScreenDimensions;
@@ -103,6 +106,7 @@ class UIDrawer {
       //Text Functions
       void DrawTextSOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
       float DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
+      void DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness);
 
       //Drawing Button Functions
       void DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 startCoords, Vector2 endCoords);
@@ -115,6 +119,7 @@ class UIDrawer {
       void DrawButton(SingleButtonGroup &buttons, int index, Rectangle buttonDest);
       void DrawTextS(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
       float DrawTextSWrapped(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
+      void ResetTextCache();
 
  };
  #endif

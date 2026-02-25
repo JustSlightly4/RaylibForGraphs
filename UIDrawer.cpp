@@ -71,10 +71,15 @@ void UIDrawer::Update() {
 		//Update FontSize
 		currentFontSize = screenDimensions.y / 22;
 
+		//Triger staticContent to be rebaked
 		updateStaticContent.Trigger();
+		resetCache.Trigger();
 	}
 
 	updateStaticContent.Update();
+	resetCache.Update();
+
+	if (resetCache.IsReady()) this->ResetTextCache();
 
 	//Update Scroll Logic
 	this->scrollLogic();
@@ -296,6 +301,33 @@ float UIDrawer::DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoord
 		this->textColor, this->currentFontSize, orientation, lineThickness);
 }
 
+void UIDrawer::DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness) {
+    Rectangle dest = CoordsToRec(startCoords, endCoords);
+
+    // 1. Check if we already have this baked
+    auto it = textCache.find(std::string(text));
+    
+    if (it == textCache.end()) {
+        // 2. Cache Miss: Bake the text into a texture
+        RenderTexture2D canvas = LoadRenderTexture((int)dest.width, (int)dest.height);
+        
+        BeginTextureMode(canvas);
+            ClearBackground(BLANK);
+            // Draw text at (0,0) relative to the texture, not the screen!
+            DrawTextSWrapped(text, {0, 0, dest.width, dest.height}, this->textColor, 
+                             this->currentFontSize, orientation, lineThickness);
+        EndTextureMode();
+
+        textCache[std::string(text)] = canvas;
+        it = textCache.find(std::string(text));
+    }
+
+    // 3. Draw the cached texture to the screen
+    // Source height is negative to flip the texture (Raylib/OpenGL requirement)
+    Rectangle source = { 0, 0, (float)it->second.texture.width, (float)-it->second.texture.height };
+    DrawTexturePro(it->second.texture, source, dest, {0,0}, 0.0f, WHITE);
+}
+
 void UIDrawer::DrawButtonOverlay(SingleButtonGroup &buttons, int index, Rectangle buttonDest) {
 	//Draw the overlay to show if the button is hovered over or clicked
 	switch(buttons[index].GetState()) {
@@ -344,4 +376,15 @@ void UIDrawer::DrawStaticButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 sta
 		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
 		DrawButtonOverlay(buttons, j, dest);
 	}
+}
+
+void UIDrawer::ResetTextCache() {
+	int i = 0;
+	for (auto it : textCache) {
+		UnloadRenderTexture(it.second);
+		++i;
+	}
+	textCache.clear();
+	std::cout << "Text Cache has been reset!\n";
+	std::cout << i << " textures cleared!\n";
 }

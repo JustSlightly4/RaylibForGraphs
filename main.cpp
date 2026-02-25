@@ -34,50 +34,51 @@ int main(void)
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
-
-    //Textures
-    shared_ptr<Texture2D> buttonTexture = make_shared<Texture2D>(LoadTexture("textures/button.png"));
-
-    //Variables
-    int variable = 0;
-    UIDrawer drawer;
-    SingleButtonGroup buttons(buttonTexture);
-        buttons.AddButton("Increase", [&variable](SingleButton &btn){
-			++variable;
-		});
-        buttons.AddButton("Subtract", [&variable](SingleButton &btn){
-			--variable;
-		});
-
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
     {
-        // Update Variables
-        drawer.Update();
-        drawer.UpdateButtons(buttons);
+        //Textures
+        shared_ptr<Texture2D> buttonTexture = make_shared<Texture2D>(LoadTexture("textures/button.png"));
 
-
-        // Draw
-        //----------------------------------------------------------------------------------
-        BeginDrawing();
-
-            //Draw the background, FPS, and grid
-            drawer.SetBackgroundColor(RAYWHITE); 
-            drawer.DrawFPSOnGrid();
-
-            //The draw static textures
-            drawer.DrawStaticTextures(drawer.staticTextures, drawer.updateStaticContent, [&](){
-                drawer.DrawGrid();
-                drawer.DrawRectangleLinesOnGrid({drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, BLACK, 4);
+        //Variables
+        int variable = 0;
+        UIDrawer drawer;
+        SingleButtonGroup buttons(buttonTexture);
+            buttons.AddButton("Increase", [&variable](SingleButton &btn){
+                ++variable;
+            });
+            buttons.AddButton("Subtract", [&variable](SingleButton &btn){
+                --variable;
             });
 
-            drawer.DrawTextSWrappedOnGrid("This is my graph visualization project! " + to_string(variable), {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
-                {UIDrawer::CENTERX, UIDrawer::CENTERY}, 4);
-            
-            drawer.DrawStaticButtonRowOnGrid(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
+        // Main game loop
+        while (!WindowShouldClose())    // Detect window close button or ESC key
+        {
+            // Update Variables
+            drawer.Update();
+            drawer.UpdateButtons(buttons);
 
-        EndDrawing();
-        //----------------------------------------------------------------------------------
+
+            // Draw
+            //----------------------------------------------------------------------------------
+            BeginDrawing();
+
+                drawer.SetBackgroundColor(RAYWHITE); 
+
+                //The draw static textures
+                drawer.DrawStaticTextures(drawer.staticTextures, drawer.updateStaticContent, [&](){
+                    drawer.DrawGrid();
+                    drawer.DrawRectangleLinesOnGrid({drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, BLACK, 4);
+                });
+
+                drawer.DrawFPSOnGrid();
+
+                drawer.DrawTextSWrappedOnGridCached("This is my graph visualization project! " + to_string(variable), {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
+                    {UIDrawer::CENTERX, UIDrawer::CENTERY}, 4);
+                
+                drawer.DrawStaticButtonRowOnGrid(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
+
+            EndDrawing();
+            //----------------------------------------------------------------------------------
+        }
     }
 
     // De-Initialization
