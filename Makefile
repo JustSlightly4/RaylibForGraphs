@@ -55,8 +55,12 @@ endif
 # Build Web version
 # Run this with: mingw32-make web
 web: $(SRC)
-	@if not exist $(RAYLIB_LIB_WEB) ($(MAKE) -C $(RAYLIB_PATH) PLATFORM=PLATFORM_WEB -B)
-	$(EM_CXX) $(CXXFLAGS) $(SRC) -o $(WEB_OUTPUT) $(RAYLIB_LIB_WEB) $(EM_FLAGS)
+ifeq ($(OS),Windows_NT)
+	@if not exist $(RAYLIB_PATH)\libraylib.a ($(MAKE) -C $(RAYLIB_PATH) PLATFORM=PLATFORM_WEB)
+else
+	@if [ ! -f $(RAYLIB_PATH)/libraylib.a ]; then $(MAKE) -C $(RAYLIB_PATH) PLATFORM=PLATFORM_WEB; fi
+endif
+	$(EM_CXX) $(SRC) -o $(WEB_OUTPUT) $(CXXFLAGS) $(RAYLIB_LIB_WEB) $(EM_FLAGS)
 
 # Local Server: Run the web version locally
 serve:

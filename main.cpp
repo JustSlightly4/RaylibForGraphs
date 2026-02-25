@@ -39,13 +39,14 @@ int main(void)
     shared_ptr<Texture2D> buttonTexture = make_shared<Texture2D>(LoadTexture("textures/button.png"));
 
     //Variables
+    int variable = 0;
     UIDrawer drawer;
     SingleButtonGroup buttons(buttonTexture);
-        buttons.AddButton("Rules", [&](SingleButton &btn){
-			//Do nothing
+        buttons.AddButton("Increase", [&variable](SingleButton &btn){
+			++variable;
 		});
-        buttons.AddButton("Settings", [&](SingleButton &btn){
-			//Do nothing
+        buttons.AddButton("Subtract", [&variable](SingleButton &btn){
+			--variable;
 		});
 
     // Main game loop
@@ -62,14 +63,18 @@ int main(void)
 
             //Draw the background, FPS, and grid
             drawer.SetBackgroundColor(RAYWHITE); 
-            drawer.DrawGrid();
             drawer.DrawFPSOnGrid();
 
-            //Draw Text in the middle of the screen and the buttons at the bottom
-            drawer.DrawTextSWrappedOnGrid("This is my graph visualization project!", {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
+            //The draw static textures
+            drawer.DrawStaticTextures(drawer.staticTextures, drawer.updateStaticContent, [&](){
+                drawer.DrawGrid();
+                drawer.DrawRectangleLinesOnGrid({drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, BLACK, 4);
+            });
+
+            drawer.DrawTextSWrappedOnGrid("This is my graph visualization project! " + to_string(variable), {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
                 {UIDrawer::CENTERX, UIDrawer::CENTERY}, 4);
-            drawer.DrawRectangleLinesOnGrid({drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, BLACK, 4);
-            drawer.DrawButtonRowOnGrid(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
+            
+            drawer.DrawStaticButtonRowOnGrid(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
 
         EndDrawing();
         //----------------------------------------------------------------------------------

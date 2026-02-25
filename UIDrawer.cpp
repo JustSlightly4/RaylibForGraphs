@@ -7,6 +7,42 @@
  
 #include "UIDrawer.h"
 
+UIDrawer::DebounceFlag::DebounceFlag() {
+	flag = false;
+	timer = 0.0f;
+	delaySeconds = 0.15f;
+}
+
+//Triggers a timer to make the flag true after timer is finished
+void UIDrawer::DebounceFlag::Trigger() {
+	timer = delaySeconds;
+	flag = false;
+}
+
+// Call this every frame in your Update loop
+void UIDrawer::DebounceFlag::Update() {
+	if (timer > 0.0f) {
+		timer -= GetFrameTime();
+		if (timer <= 0.0f) {
+			flag = true;
+			return;
+		}
+	}
+
+	if (flag) {
+		this->Reset();
+	}
+}
+
+bool UIDrawer::DebounceFlag::IsReady() {
+	return flag;
+}
+
+void UIDrawer::DebounceFlag::Reset() {
+	timer = 0.0f;
+	flag = false;
+}
+
 UIDrawer::UIDrawer() {
 	screenDimensions = {(float)GetScreenWidth(), (float)GetScreenHeight()};
 	prevScreenDimensions = screenDimensions;
@@ -16,8 +52,8 @@ UIDrawer::UIDrawer() {
 	heightSegment = screenDimensions.y/heightBlocks;
 	currentFontSize = screenDimensions.y / 22;
 	currentFont = LoadFont("fonts/MontserratExtrabold.ttf");
-    gridNeedsUpdate = true;
-	gridCanvas = { 0 }; // Initialize ID to 0
+	staticTextures = { 0 }; // Initialize ID to 0
+	updateStaticContent.Trigger();
 }
 
 void UIDrawer::Update() {
@@ -35,8 +71,10 @@ void UIDrawer::Update() {
 		//Update FontSize
 		currentFontSize = screenDimensions.y / 22;
 
-		gridNeedsUpdate = true;
+		updateStaticContent.Trigger();
 	}
+
+	updateStaticContent.Update();
 
 	//Update Scroll Logic
 	this->scrollLogic();
@@ -53,6 +91,31 @@ void UIDrawer::SetBackgroundColor(Color color) {
 	ClearBackground(color); 
 }
 
+//This function is used to "bake" static content on the screen.
+//Given drawing functions, it will merge their results into a single
+//texture that the GPU can draw with one call instead of drawing
+//everything individual. Basically, for any static largely unchanging
+//drawings on the screen use this function to increase performance.
+void UIDrawer::DrawStaticTextures(RenderTexture2D &canvas, DebounceFlag &flag, std::function<void()> drawFunc) {
+	if (flag.IsReady()) {
+		if (canvas.id != 0) UnloadRenderTexture(canvas); 
+		canvas = LoadRenderTexture(screenDimensions.x, screenDimensions.y);
+		BeginTextureMode(canvas);
+			ClearBackground(BLANK);
+			drawFunc();
+		EndTextureMode();
+	}
+
+	if (canvas.id != 0) {
+		// 2. Draw the baked grid (single draw call instead of 64+ line calls)
+		// Source rect has negative height to fix the OpenGL Y-flip
+		Rectangle source = { 0, 0, (float)canvas.texture.width, (float)-canvas.texture.height };
+		Rectangle dest = { 0, 0, this->screenDimensions.x, this->screenDimensions.y };
+		
+		DrawTexturePro(canvas.texture, source, dest, {0,0}, 0.0f, WHITE);
+	}
+}
+
 void UIDrawer::scrollLogic() {
 	if (this->maxScroll < 0) this->maxScroll = 0;
 	if (IsKeyDown(KEY_DOWN) || GetMouseWheelMove() < 0) scrollOffset += this->scrollSpeed;
@@ -63,38 +126,18 @@ void UIDrawer::scrollLogic() {
 
 //Draws grid across screen for debugging purposes
 void UIDrawer::DrawGrid() {
-
-    if (gridNeedsUpdate) {
-		if (gridCanvas.id != 0) UnloadRenderTexture(gridCanvas); 
-		gridCanvas = LoadRenderTexture(screenDimensions.x, screenDimensions.y);
-        BeginTextureMode(gridCanvas);
-            ClearBackground(BLANK); // Make the canvas transparent
-            
-            // --- YOUR ORIGINAL LOGIC START ---
-            Vector2 linePos = {0, 0};
-            for (int i = 0; i < this->widthBlocks + 1; ++i) {
-                DrawLineEx({linePos.x, 0}, {linePos.x, this->screenDimensions.y}, 1, BLACK);
-                linePos.x = i * this->widthSegment;
-            }
-            linePos.y = 0; // Reset Y for the second loop
-            for (int i = 0; i < this->heightBlocks + 1; ++i) {
-                DrawLineEx({0, linePos.y}, {this->screenDimensions.x, linePos.y}, 1, BLACK);
-                linePos.y = i * this->heightSegment;
-            }
-            // --- YOUR ORIGINAL LOGIC END ---
-            
-        EndTextureMode();
-        gridNeedsUpdate = false;
-    }
-
-	if (gridCanvas.id != 0) {
-		// 2. Draw the baked grid (single draw call instead of 64+ line calls)
-		// Source rect has negative height to fix the OpenGL Y-flip
-		Rectangle source = { 0, 0, (float)gridCanvas.texture.width, (float)-gridCanvas.texture.height };
-		Rectangle dest = { 0, 0, this->screenDimensions.x, this->screenDimensions.y };
-		
-		DrawTexturePro(gridCanvas.texture, source, dest, {0,0}, 0.0f, WHITE);
+	// --- YOUR ORIGINAL LOGIC START ---
+	Vector2 linePos = {0, 0};
+	for (int i = 0; i < this->widthBlocks + 1; ++i) {
+		DrawLineEx({linePos.x, 0}, {linePos.x, this->screenDimensions.y}, 1, BLACK);
+		linePos.x = i * this->widthSegment;
 	}
+	linePos.y = 0; // Reset Y for the second loop
+	for (int i = 0; i < this->heightBlocks + 1; ++i) {
+		DrawLineEx({0, linePos.y}, {this->screenDimensions.x, linePos.y}, 1, BLACK);
+		linePos.y = i * this->heightSegment;
+	}
+	// --- YOUR ORIGINAL LOGIC END ---
 }
 
 //Draws dots across screen for debugging purposes
@@ -253,12 +296,8 @@ float UIDrawer::DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoord
 		this->textColor, this->currentFontSize, orientation, lineThickness);
 }
 
-//Draws a single button on the grid
-void UIDrawer::DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 startCoords, Vector2 endCoords) {
-	if (index < 0 || index > buttons.GetSize()-1) return;
-	Rectangle buttonDest = CoordsToRec(startCoords, endCoords);
-	buttons[index].SetBounds(buttonDest);
-	DrawTextureOnGrid(*buttons.GetTexture(), this->buttonSource, startCoords, endCoords, WHITE);
+void UIDrawer::DrawButtonOverlay(SingleButtonGroup &buttons, int index, Rectangle buttonDest) {
+	//Draw the overlay to show if the button is hovered over or clicked
 	switch(buttons[index].GetState()) {
 		case 1://Hovered GRAY (Color){ 130, 130, 130, 100 }
 			DrawRectangleRec(buttonDest, (Color){ 130, 130, 130, 100 });
@@ -269,24 +308,40 @@ void UIDrawer::DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 s
 		default: //Neither hover nor clicked
 			break;
 	}
-	DrawTextSWrappedOnGrid(buttons[index].GetLabel(), startCoords, endCoords, (Alignment){CENTERX, CENTERY});
+}
+
+//Draws a single button on the grid
+void UIDrawer::DrawButton(SingleButtonGroup &buttons, int index, Rectangle buttonDest) {
+	buttons[index].SetBounds(buttonDest);
+
+	//Draw the texture and the text
+	DrawTexturePro(*buttons.GetTexture(), this->buttonSource, buttonDest, this->origin, 0.0f, WHITE);
+	DrawTextSWrapped(buttons[index].GetLabel(), buttonDest, this->textColor, this->currentFontSize, (Alignment){CENTERX, CENTERY});
+}
+
+//Draws a single button on the grid
+void UIDrawer::DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 startCoords, Vector2 endCoords) {
+	if (index < 0 || index > buttons.GetSize()-1) return;
+	Rectangle buttonDest = CoordsToRec(startCoords, endCoords);
+	DrawButton(buttons, index, buttonDest);
+	DrawButtonOverlay(buttons, index, buttonDest);
 }
 
 //Draws a horizontal row of buttons on the grid
-void UIDrawer::DrawButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords) {
+void UIDrawer::DrawStaticButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords) {
 	int amountOfButtons = buttons.GetSize();
-	float buttonWidth = (endCoords.x - startCoords.x)/(min(buttons.GetSize(), amountOfButtons));
-	int amountRows = ceil((float)buttons.GetSize() / (float)amountOfButtons);
-	float buttonHeight = (endCoords.y - startCoords.y)/amountRows;
+	float buttonWidth = (endCoords.x - startCoords.x)/amountOfButtons;
+	float buttonHeight = (endCoords.y - startCoords.y);
 
-	int buttonIndex = 0; //So that we know which button we're indexing
-	for (int i = 0; i < amountRows; ++i){ //The row
-		for (int j = 0; j < amountOfButtons; ++j) { //the column
-			if (buttonIndex >= buttons.GetSize()) return;
-			DrawButtonOnGrid(buttons, buttonIndex, 
-			{startCoords.x + (j * buttonWidth), startCoords.y + (i * buttonHeight)}, 
-			{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + (i * buttonHeight) + buttonHeight});
-			++buttonIndex; //Advance the buttonIndex
-		}
+	for (int j = 0; j < amountOfButtons; ++j) {
+		Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
+		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
+		DrawButton(buttons, j, dest);
+	}
+
+	for (int j = 0; j < amountOfButtons; ++j) {
+		Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
+		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
+		DrawButtonOverlay(buttons, j, dest);
 	}
 }
