@@ -9,7 +9,7 @@ RAYLIB_PATH = ./raylib/src
 
 # 2. Compiler Settings
 CXX = g++
-CXXFLAGS = -Wall -std=c++17 -I$(RAYLIB_PATH)
+CXXFLAGS = -Wall -pg -std=c++17 -I$(RAYLIB_PATH)
 
 # 3. OS Detection & Desktop Flags
 ifeq ($(OS),Windows_NT)
@@ -45,7 +45,11 @@ all: $(EXE)
 
 # Build Desktop Executable
 $(EXE): $(SRC)
+ifeq ($(OS),Windows_NT)
 	@if not exist $(RAYLIB_PATH)\libraylib.a ($(MAKE) -C $(RAYLIB_PATH) PLATFORM=PLATFORM_DESKTOP)
+else
+	@if [ ! -f $(RAYLIB_PATH)/libraylib.a ]; then $(MAKE) -C $(RAYLIB_PATH) PLATFORM=PLATFORM_DESKTOP; fi
+endif
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(EXE) $(LDFLAGS)
 
 # Build Web version
@@ -57,6 +61,10 @@ web: $(SRC)
 # Local Server: Run the web version locally
 serve:
 	emrun --port 8080 index.html
+
+# Run the Desktop version of the program
+run: $(EXE)
+	./$(EXE)
 
 # Clean project files
 clean:
@@ -75,5 +83,6 @@ clean-internal:
 # Deep clean (including Raylib libraries)
 clean-all: clean
 	$(MAKE) -C $(RAYLIB_PATH) clean
+	@echo "All internal build files and the final output files removed."
 
-.PHONY: all clean clean-all web serve clean-internal
+.PHONY: all clean clean-all web serve run clean-internal

@@ -15,6 +15,7 @@
 #include <functional>
 #include <iomanip>
 #include <cmath>
+#include <string_view>
 #include "raylib.h"
 #include "Buttons.h"
 
@@ -22,6 +23,7 @@
     public:
       //Mutable
       Vector2 screenDimensions;
+      Vector2 prevScreenDimensions;
       float maxScroll;
       float widthSegment;
       float heightSegment;
@@ -39,6 +41,10 @@
       static constexpr int widthBlocks = 32;
       static constexpr Color textColor = BLACK;
       static constexpr float scrollSpeed = 50.0f;
+
+      //Textures and flags for textures
+      RenderTexture2D gridCanvas;
+      bool gridNeedsUpdate;
 
       //Alignemnt Variables
       enum AlignmentX {
@@ -74,10 +80,12 @@
       void DrawTextureOnGrid(Texture2D &texture, Rectangle source, Vector2 startCoords, Vector2 endCoords, Color tint);
       void DrawRectangleOnGrid(Vector2 startCoords, Vector2 endCoords, Color tint);
       void DrawRectangleLinesOnGrid(Vector2 startCoords, Vector2 endCoords, Color tint, int lineThickness);
-      void DrawTextS(std::string text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
-      void DrawTextSOnGrid(std::string text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
-      float DrawTextSWrapped(std::string text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
-      float DrawTextSWrappedOnGrid(std::string text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
+
+      //Text Functions
+      void DrawTextS(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
+      void DrawTextSOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
+      float DrawTextSWrapped(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
+      float DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
 
       //Drawing Button Functions
       void DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 startCoords, Vector2 endCoords);

@@ -67,7 +67,8 @@ int main(void)
 
             //Draw Text in the middle of the screen and the buttons at the bottom
             drawer.DrawTextSWrappedOnGrid("This is my graph visualization project!", {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
-                {UIDrawer::CENTERX, UIDrawer::CENTERY});
+                {UIDrawer::CENTERX, UIDrawer::CENTERY}, 4);
+            drawer.DrawRectangleLinesOnGrid({drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, BLACK, 4);
             drawer.DrawButtonRowOnGrid(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
 
         EndDrawing();
