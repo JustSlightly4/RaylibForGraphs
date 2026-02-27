@@ -32,7 +32,7 @@ int main(void)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "Graph Visualization Project");
 
-    SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+    SetTargetFPS(0);               // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
     {
         //Textures
@@ -74,7 +74,7 @@ int main(void)
                 drawer.DrawTextSWrappedOnGridCached("This is my graph visualization project! " + to_string(variable), {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
                     {UIDrawer::CENTERX, UIDrawer::CENTERY}, 4);
                 
-                drawer.DrawStaticButtonRowOnGrid(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
+                drawer.DrawButtonRowOnGridCached(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});
 
             EndDrawing();
             //----------------------------------------------------------------------------------

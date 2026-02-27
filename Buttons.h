@@ -13,6 +13,7 @@
 #include <sstream>
 #include <functional>
 #include <memory>
+#include <atomic>
 #include "raylib.h"
 using namespace std;
 
@@ -54,11 +55,13 @@ class SingleButtonGroup {
 		auto begin() { return buttons.begin(); }
 		auto end() { return buttons.end(); }
 		shared_ptr<Texture2D>& GetTexture();
+		int GetID();
 	protected:
+		int id; //This instances id
+		static std::atomic<int> s_id; //Global id
 		std::shared_ptr<Texture2D> buttonTexture;
 		int size;
 		vector<SingleButton> buttons;
 		unordered_map<string, int> buttonsMap;
 };
-
 #endif

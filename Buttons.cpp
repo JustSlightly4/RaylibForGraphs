@@ -74,6 +74,7 @@ bool SingleButton::GetPendingAction() {
 //Start SingleButtonGroup Class----------------------------------
 SingleButtonGroup::SingleButtonGroup(shared_ptr<Texture2D>& texture) : buttonTexture(texture) {
 	size = 0;
+	id = ++s_id;
 }
 
 void SingleButtonGroup::AddButton(string label, function<void(SingleButton&)> givenFunction) {
@@ -151,4 +152,10 @@ void SingleButtonGroup::SetFunctionality(bool b, int start, int end) {
 shared_ptr<Texture2D>& SingleButtonGroup::GetTexture() {
 	return buttonTexture; // Doesn't increase reference count
 }
+
+int SingleButtonGroup::GetID() {
+	return this->id;
+}
+
+std::atomic<int> SingleButtonGroup::s_id(0); //Set global id variable to zero
 //End SingleButtonGroup Class----------------------------------

@@ -57,7 +57,8 @@ class UIDrawer {
 
       };
 
-      std::unordered_map<std::string, RenderTexture2D> textCache;
+      std::unordered_map<uint64_t, std::pair<RenderTexture2D, int>> textCache;
+      std::unordered_map<int, RenderTexture2D> buttonCache;
       DebounceFlag resetCache;
 
       //Mutable
@@ -105,21 +106,25 @@ class UIDrawer {
 
       //Text Functions
       void DrawTextSOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
+      void DrawTextSOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
       float DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
-      void DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness);
+      float DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness = 0);
 
       //Drawing Button Functions
       void DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 startCoords, Vector2 endCoords);
-      void DrawStaticButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords);
+      void DrawButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords);
+      void DrawButtonRowOnGridCached(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords);
 
       protected:
       //Private Helper Functions
-      Rectangle CoordsToRec(Vector2 startCoords, Vector2 endCoords);
+      constexpr Rectangle CoordsToRec(Vector2 startCoords, Vector2 endCoords);
       void DrawButtonOverlay(SingleButtonGroup &buttons, int index, Rectangle buttonDest);
       void DrawButton(SingleButtonGroup &buttons, int index, Rectangle buttonDest);
       void DrawTextS(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
       float DrawTextSWrapped(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);
       void ResetTextCache();
+      void ResetButtonCache();
+      constexpr uint64_t HashString(std::string_view text);
 
  };
  #endif

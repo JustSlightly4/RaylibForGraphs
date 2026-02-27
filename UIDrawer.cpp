@@ -51,9 +51,16 @@ UIDrawer::UIDrawer() {
 	widthSegment = screenDimensions.x/widthBlocks;
 	heightSegment = screenDimensions.y/heightBlocks;
 	currentFontSize = screenDimensions.y / 22;
-	currentFont = LoadFont("fonts/MontserratExtrabold.ttf");
+	//currentFont = LoadFont("fonts/MontserratExtrabold.ttf");
 	staticTextures = { 0 }; // Initialize ID to 0
 	updateStaticContent.Trigger();
+	// 1. Define the character range (e.g., all printable ASCII)
+	int glyphCount = 0;
+	int *fontChars = LoadCodepoints(" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", &glyphCount);
+
+	// 2. Load the font with a specific size and the codepoints
+	// This creates the Atlas texture inside the Font object
+	currentFont = LoadFontEx("fonts/MontserratExtrabold.ttf", 128, fontChars, glyphCount);
 }
 
 void UIDrawer::Update() {
@@ -79,7 +86,10 @@ void UIDrawer::Update() {
 	updateStaticContent.Update();
 	resetCache.Update();
 
-	if (resetCache.IsReady()) this->ResetTextCache();
+	if (resetCache.IsReady()) {
+		this->ResetTextCache();
+		this->ResetButtonCache();
+	}
 
 	//Update Scroll Logic
 	this->scrollLogic();
@@ -161,7 +171,7 @@ void UIDrawer::DrawFPSOnGrid() {
 	DrawTextSOnGrid(FPS, {0, 0}, {3, 1}, {LEFTX, UPY});
 }
 
-inline Rectangle UIDrawer::CoordsToRec(Vector2 startCoords, Vector2 endCoords) {
+constexpr Rectangle UIDrawer::CoordsToRec(Vector2 startCoords, Vector2 endCoords) {
 	return (Rectangle){startCoords.x * this->widthSegment, startCoords.y * this->heightSegment, 
 		(endCoords.x - startCoords.x) * this->widthSegment, 
 		(endCoords.y - startCoords.y) * this->heightSegment};
@@ -226,6 +236,35 @@ void UIDrawer::DrawTextS(std::string_view text, Rectangle dest, Color tint, floa
 void UIDrawer::DrawTextSOnGrid(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness) {
 	DrawTextS(text, CoordsToRec(startCoords, endCoords), 
 		this->textColor, this->currentFontSize, orientation, lineThickness);
+}
+
+//DrawTextS but on a grid
+void UIDrawer::DrawTextSOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness) {
+	Rectangle dest = CoordsToRec(startCoords, endCoords);
+
+    // 1. Check if we already have this baked
+	uint64_t textHash = HashString(text);
+    auto it = textCache.find(textHash);
+    
+    if (it == textCache.end()) {
+        // 2. Cache Miss: Bake the text into a texture
+        RenderTexture2D canvas = LoadRenderTexture((int)dest.width, (int)dest.height);
+        
+        BeginTextureMode(canvas);
+            ClearBackground(BLANK);
+            // Draw text at (0,0) relative to the texture, not the screen!
+            DrawTextS(text, CoordsToRec(startCoords, endCoords), 
+				this->textColor, this->currentFontSize, orientation, lineThickness);
+        EndTextureMode();
+
+        textCache[textHash] = {canvas, 0};
+        it = textCache.find(textHash);
+    }
+
+    // 3. Draw the cached texture to the screen
+    // Source height is negative to flip the texture (Raylib/OpenGL requirement)
+    Rectangle source = { 0, 0, (float)it->second.first.texture.width, (float)-it->second.first.texture.height };
+    DrawTexturePro(it->second.first.texture, source, dest, {0,0}, 0.0f, WHITE);
 }
 
 float UIDrawer::DrawTextSWrapped(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness) {
@@ -301,31 +340,34 @@ float UIDrawer::DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoord
 		this->textColor, this->currentFontSize, orientation, lineThickness);
 }
 
-void UIDrawer::DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness) {
+float UIDrawer::DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness) {
     Rectangle dest = CoordsToRec(startCoords, endCoords);
 
     // 1. Check if we already have this baked
-    auto it = textCache.find(std::string(text));
+	uint64_t textHash = HashString(text);
+    auto it = textCache.find(textHash);
     
     if (it == textCache.end()) {
         // 2. Cache Miss: Bake the text into a texture
         RenderTexture2D canvas = LoadRenderTexture((int)dest.width, (int)dest.height);
         
+		int textHeight;
         BeginTextureMode(canvas);
             ClearBackground(BLANK);
             // Draw text at (0,0) relative to the texture, not the screen!
-            DrawTextSWrapped(text, {0, 0, dest.width, dest.height}, this->textColor, 
+            textHeight = DrawTextSWrapped(text, {0, 0, dest.width, dest.height}, this->textColor, 
                              this->currentFontSize, orientation, lineThickness);
         EndTextureMode();
 
-        textCache[std::string(text)] = canvas;
-        it = textCache.find(std::string(text));
+        textCache[textHash] = {canvas, textHeight};
+        it = textCache.find(textHash);
     }
 
     // 3. Draw the cached texture to the screen
     // Source height is negative to flip the texture (Raylib/OpenGL requirement)
-    Rectangle source = { 0, 0, (float)it->second.texture.width, (float)-it->second.texture.height };
-    DrawTexturePro(it->second.texture, source, dest, {0,0}, 0.0f, WHITE);
+    Rectangle source = { 0, 0, (float)it->second.first.texture.width, (float)-it->second.first.texture.height };
+    DrawTexturePro(it->second.first.texture, source, dest, {0,0}, 0.0f, WHITE);
+	return it->second.second;
 }
 
 void UIDrawer::DrawButtonOverlay(SingleButtonGroup &buttons, int index, Rectangle buttonDest) {
@@ -360,7 +402,7 @@ void UIDrawer::DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 s
 }
 
 //Draws a horizontal row of buttons on the grid
-void UIDrawer::DrawStaticButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords) {
+void UIDrawer::DrawButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords) {
 	int amountOfButtons = buttons.GetSize();
 	float buttonWidth = (endCoords.x - startCoords.x)/amountOfButtons;
 	float buttonHeight = (endCoords.y - startCoords.y);
@@ -378,13 +420,79 @@ void UIDrawer::DrawStaticButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 sta
 	}
 }
 
+//Draws a horizontal row of buttons on the grid
+void UIDrawer::DrawButtonRowOnGridCached(SingleButtonGroup &buttons, Vector2 startCoords, Vector2 endCoords) {
+	int amountOfButtons = buttons.GetSize();
+	float buttonWidth = (endCoords.x - startCoords.x)/amountOfButtons;
+	float buttonHeight = (endCoords.y - startCoords.y);
+
+	Rectangle dest = CoordsToRec(startCoords, endCoords);
+
+    // 1. Check if we already have this baked
+	int id = buttons.GetID();
+    auto it = buttonCache.find(id);
+    
+    if (it == buttonCache.end()) {
+
+        // 2. Cache Miss: Bake the text into a texture
+        RenderTexture2D canvas = LoadRenderTexture((int)dest.width, (int)dest.height);
+        
+        BeginTextureMode(canvas);
+            ClearBackground(BLANK);
+            // Draw text at (0,0) relative to the texture, not the screen!
+            for (int j = 0; j < amountOfButtons; ++j) {
+				Rectangle dest = CoordsToRec({0 + (j * buttonWidth), 0}, 
+				{0 + (j * buttonWidth) + buttonWidth, 0 + buttonHeight});
+				DrawButton(buttons, j, dest);
+			}
+        EndTextureMode();
+
+        buttonCache[id] = canvas;
+        it = buttonCache.find(id);
+    }
+
+    // 3. Draw the cached texture to the screen
+    // Source height is negative to flip the texture (Raylib/OpenGL requirement)
+    Rectangle source = { 0, 0, (float)it->second.texture.width, (float)-it->second.texture.height };
+    DrawTexturePro(it->second.texture, source, dest, {0,0}, 0.0f, WHITE);
+
+	//Draw the overlays dynamically
+	for (int j = 0; j < amountOfButtons; ++j) {
+		Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
+		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
+		buttons[j].SetBounds(dest);
+		DrawButtonOverlay(buttons, j, dest);
+	}
+}
+
 void UIDrawer::ResetTextCache() {
 	int i = 0;
 	for (auto it : textCache) {
-		UnloadRenderTexture(it.second);
+		UnloadRenderTexture(it.second.first);
 		++i;
 	}
 	textCache.clear();
 	std::cout << "Text Cache has been reset!\n";
 	std::cout << i << " textures cleared!\n";
+}
+
+void UIDrawer::ResetButtonCache() {
+	int i = 0;
+	for (auto it : buttonCache) {
+		UnloadRenderTexture(it.second);
+		++i;
+	}
+	buttonCache.clear();
+	std::cout << "Button Cache has been reset!\n";
+	std::cout << i << " textures cleared!\n";
+}
+
+constexpr uint64_t UIDrawer::HashString(std::string_view text) {
+    uint64_t hash = 14695981039346656037ull; // FNV offset basis
+    for (char c : text)
+    {
+        hash ^= static_cast<uint8_t>(c);
+        hash *= 1099511628211ull; // FNV prime
+    }
+    return hash;
 }

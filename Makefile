@@ -9,7 +9,7 @@ RAYLIB_PATH = ./raylib/src
 
 # 2. Compiler Settings
 CXX = g++
-CXXFLAGS = -Wall -pg -std=c++17 -I$(RAYLIB_PATH)
+CXXFLAGS = -Wall -pg -std=c++17 -O3 -I$(RAYLIB_PATH)
 
 # 3. OS Detection & Desktop Flags
 ifeq ($(OS),Windows_NT)
