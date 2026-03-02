@@ -118,6 +118,8 @@ class UIDrawer {
       protected:
       //Private Helper Functions
       constexpr Rectangle CoordsToRec(Vector2 startCoords, Vector2 endCoords);
+      constexpr Vector2 CoordToVec(Vector2 coords);
+      bool IsMouseWithinDest(const Rectangle &destination);
       void DrawButtonOverlay(SingleButtonGroup &buttons, int index, Rectangle buttonDest);
       void DrawButton(SingleButtonGroup &buttons, int index, Rectangle buttonDest);
       void DrawTextS(std::string_view text, Rectangle dest, Color tint, float fontSize, Alignment orientation, int lineThickness = 0);

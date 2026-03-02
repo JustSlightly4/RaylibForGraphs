@@ -56,11 +56,17 @@ class SingleButtonGroup {
 		auto end() { return buttons.end(); }
 		shared_ptr<Texture2D>& GetTexture();
 		int GetID();
+		Rectangle GetBounds();
+		void SetBounds(const Rectangle &b);
+		bool WasInsideLastFrame();
+		void SetWasInsideLastFrame(bool b);
 	protected:
 		int id; //This instances id
 		static std::atomic<int> s_id; //Global id
 		std::shared_ptr<Texture2D> buttonTexture;
 		int size;
+		Rectangle bounds;
+		bool wasInsideLastFrame;
 		vector<SingleButton> buttons;
 		unordered_map<string, int> buttonsMap;
 };

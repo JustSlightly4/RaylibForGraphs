@@ -41,12 +41,15 @@ int main(void)
         //Variables
         int variable = 0;
         UIDrawer drawer;
+        string myText = "This is my graph visualization project! 0";
         SingleButtonGroup buttons(buttonTexture);
-            buttons.AddButton("Increase", [&variable](SingleButton &btn){
+            buttons.AddButton("Increase", [&variable, &myText](SingleButton &btn){
                 ++variable;
+                myText = "This is my graph visualization project! " + to_string(variable);
             });
-            buttons.AddButton("Subtract", [&variable](SingleButton &btn){
+            buttons.AddButton("Subtract", [&variable, &myText](SingleButton &btn){
                 --variable;
+                myText = "This is my graph visualization project! " + to_string(variable);
             });
 
         // Main game loop
@@ -71,7 +74,7 @@ int main(void)
 
                 drawer.DrawFPSOnGrid();
 
-                drawer.DrawTextSWrappedOnGridCached("This is my graph visualization project! " + to_string(variable), {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
+                drawer.DrawTextSWrappedOnGridCached(myText, {drawer.widthBlocks/2-4, drawer.heightBlocks/2-2}, {drawer.widthBlocks/2+4, drawer.heightBlocks/2+2}, 
                     {UIDrawer::CENTERX, UIDrawer::CENTERY}, 4);
                 
                 drawer.DrawButtonRowOnGridCached(buttons, {0, drawer.heightBlocks-2}, {8, drawer.heightBlocks});

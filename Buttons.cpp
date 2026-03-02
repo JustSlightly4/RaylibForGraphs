@@ -75,6 +75,7 @@ bool SingleButton::GetPendingAction() {
 SingleButtonGroup::SingleButtonGroup(shared_ptr<Texture2D>& texture) : buttonTexture(texture) {
 	size = 0;
 	id = ++s_id;
+	wasInsideLastFrame = false;
 }
 
 void SingleButtonGroup::AddButton(string label, function<void(SingleButton&)> givenFunction) {
@@ -155,6 +156,22 @@ shared_ptr<Texture2D>& SingleButtonGroup::GetTexture() {
 
 int SingleButtonGroup::GetID() {
 	return this->id;
+}
+
+Rectangle SingleButtonGroup::GetBounds() {
+	return bounds;
+}
+
+void SingleButtonGroup::SetBounds(const Rectangle &b) {
+	this->bounds = b;
+}
+
+bool SingleButtonGroup::WasInsideLastFrame() {
+	return this->wasInsideLastFrame;
+}
+
+void SingleButtonGroup::SetWasInsideLastFrame(bool b) {
+	this->wasInsideLastFrame = b;
 }
 
 std::atomic<int> SingleButtonGroup::s_id(0); //Set global id variable to zero

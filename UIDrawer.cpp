@@ -99,7 +99,14 @@ void UIDrawer::Update() {
 }
 
 void UIDrawer::UpdateButtons(SingleButtonGroup &buttons) {
-	buttons.AnimationLogic(this->mousePoint);
+    bool isInside = IsMouseWithinDest(buttons.GetBounds());
+    
+    // Run logic if currently inside OR if we need to process the "exit" frame
+    if (isInside || buttons.WasInsideLastFrame()) {
+        buttons.AnimationLogic(this->mousePoint);
+		if (isInside) buttons.SetWasInsideLastFrame(true);
+		else buttons.SetWasInsideLastFrame(false);
+    }
 }
 
 void UIDrawer::SetBackgroundColor(Color color) {
@@ -165,16 +172,33 @@ void UIDrawer::DrawGridDots() {
 	}
 }
 
-//Draws the FPS on the top left of the screen
 void UIDrawer::DrawFPSOnGrid() {
-	std::string FPS = "FPS: " + std::to_string(GetFPS());
-	DrawTextSOnGrid(FPS, {0, 0}, {3, 1}, {LEFTX, UPY});
+    char fpsBuffer[16]; // Enough for "FPS: 9999"
+    
+    // snprintf is generally faster than std::to_string + concatenation
+    // and performs zero heap allocations.
+    std::snprintf(fpsBuffer, sizeof(fpsBuffer), "FPS: %d", GetFPS());
+
+    // Assuming DrawTextSOnGrid can take a const char* or string_view
+	DrawTextEx(this->currentFont, fpsBuffer, CoordToVec({0, 0}), this->currentFontSize, 1.0f, this->textColor); // Draw text using font and additional parameters
 }
 
 constexpr Rectangle UIDrawer::CoordsToRec(Vector2 startCoords, Vector2 endCoords) {
 	return (Rectangle){startCoords.x * this->widthSegment, startCoords.y * this->heightSegment, 
 		(endCoords.x - startCoords.x) * this->widthSegment, 
 		(endCoords.y - startCoords.y) * this->heightSegment};
+}
+
+constexpr Vector2 UIDrawer::CoordToVec(Vector2 coords) {
+	return (Vector2){coords.x * this->widthSegment, coords.y * this->heightSegment};
+}
+
+bool UIDrawer::IsMouseWithinDest(const Rectangle &destination) {
+	if (mousePoint.x >= destination.x && mousePoint.x <= destination.x + destination.width &&
+			mousePoint.y >= destination.y && mousePoint.y <= destination.y + destination.width) {
+			return true;
+	}
+	return false;
 }
 
 //Draws a texture on a grid
@@ -340,14 +364,18 @@ float UIDrawer::DrawTextSWrappedOnGrid(std::string_view text, Vector2 startCoord
 		this->textColor, this->currentFontSize, orientation, lineThickness);
 }
 
+//Cached version of DrawTextSWrappedOnGrid.
+//To be used for mostly static text that changes
+//every once in a while.
 float UIDrawer::DrawTextSWrappedOnGridCached(std::string_view text, Vector2 startCoords, Vector2 endCoords, Alignment orientation, int lineThickness) {
     Rectangle dest = CoordsToRec(startCoords, endCoords);
 
     // 1. Check if we already have this baked
 	uint64_t textHash = HashString(text);
-    auto it = textCache.find(textHash);
+    // 1. Single lookup attempt
+	auto [it, inserted] = textCache.try_emplace(textHash);
     
-    if (it == textCache.end()) {
+    if (inserted) {
         // 2. Cache Miss: Bake the text into a texture
         RenderTexture2D canvas = LoadRenderTexture((int)dest.width, (int)dest.height);
         
@@ -359,8 +387,7 @@ float UIDrawer::DrawTextSWrappedOnGridCached(std::string_view text, Vector2 star
                              this->currentFontSize, orientation, lineThickness);
         EndTextureMode();
 
-        textCache[textHash] = {canvas, textHeight};
-        it = textCache.find(textHash);
+        it->second = {canvas, textHeight}; // Update the value in place
     }
 
     // 3. Draw the cached texture to the screen
@@ -386,8 +413,6 @@ void UIDrawer::DrawButtonOverlay(SingleButtonGroup &buttons, int index, Rectangl
 
 //Draws a single button on the grid
 void UIDrawer::DrawButton(SingleButtonGroup &buttons, int index, Rectangle buttonDest) {
-	buttons[index].SetBounds(buttonDest);
-
 	//Draw the texture and the text
 	DrawTexturePro(*buttons.GetTexture(), this->buttonSource, buttonDest, this->origin, 0.0f, WHITE);
 	DrawTextSWrapped(buttons[index].GetLabel(), buttonDest, this->textColor, this->currentFontSize, (Alignment){CENTERX, CENTERY});
@@ -397,6 +422,7 @@ void UIDrawer::DrawButton(SingleButtonGroup &buttons, int index, Rectangle butto
 void UIDrawer::DrawButtonOnGrid(SingleButtonGroup &buttons, int index, Vector2 startCoords, Vector2 endCoords) {
 	if (index < 0 || index > buttons.GetSize()-1) return;
 	Rectangle buttonDest = CoordsToRec(startCoords, endCoords);
+	buttons[index].SetBounds(buttonDest);
 	DrawButton(buttons, index, buttonDest);
 	DrawButtonOverlay(buttons, index, buttonDest);
 }
@@ -406,16 +432,13 @@ void UIDrawer::DrawButtonRowOnGrid(SingleButtonGroup &buttons, Vector2 startCoor
 	int amountOfButtons = buttons.GetSize();
 	float buttonWidth = (endCoords.x - startCoords.x)/amountOfButtons;
 	float buttonHeight = (endCoords.y - startCoords.y);
+	buttons.SetBounds(CoordsToRec(startCoords, endCoords));
 
 	for (int j = 0; j < amountOfButtons; ++j) {
 		Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
 		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
+		buttons[j].SetBounds(dest);
 		DrawButton(buttons, j, dest);
-	}
-
-	for (int j = 0; j < amountOfButtons; ++j) {
-		Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
-		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
 		DrawButtonOverlay(buttons, j, dest);
 	}
 }
@@ -428,14 +451,13 @@ void UIDrawer::DrawButtonRowOnGridCached(SingleButtonGroup &buttons, Vector2 sta
 
 	Rectangle dest = CoordsToRec(startCoords, endCoords);
 
-    // 1. Check if we already have this baked
 	int id = buttons.GetID();
     auto it = buttonCache.find(id);
     
     if (it == buttonCache.end()) {
 
-        // 2. Cache Miss: Bake the text into a texture
         RenderTexture2D canvas = LoadRenderTexture((int)dest.width, (int)dest.height);
+		buttons.SetBounds(dest);
         
         BeginTextureMode(canvas);
             ClearBackground(BLANK);
@@ -443,6 +465,9 @@ void UIDrawer::DrawButtonRowOnGridCached(SingleButtonGroup &buttons, Vector2 sta
             for (int j = 0; j < amountOfButtons; ++j) {
 				Rectangle dest = CoordsToRec({0 + (j * buttonWidth), 0}, 
 				{0 + (j * buttonWidth) + buttonWidth, 0 + buttonHeight});
+				Rectangle screenDest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
+				{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
+				buttons[j].SetBounds(screenDest);
 				DrawButton(buttons, j, dest);
 			}
         EndTextureMode();
@@ -456,12 +481,13 @@ void UIDrawer::DrawButtonRowOnGridCached(SingleButtonGroup &buttons, Vector2 sta
     Rectangle source = { 0, 0, (float)it->second.texture.width, (float)-it->second.texture.height };
     DrawTexturePro(it->second.texture, source, dest, {0,0}, 0.0f, WHITE);
 
-	//Draw the overlays dynamically
-	for (int j = 0; j < amountOfButtons; ++j) {
-		Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
-		{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
-		buttons[j].SetBounds(dest);
-		DrawButtonOverlay(buttons, j, dest);
+	if (IsMouseWithinDest(dest)) {
+		//Draw the overlays dynamically
+		for (int j = 0; j < amountOfButtons; ++j) {
+			Rectangle dest = CoordsToRec({startCoords.x + (j * buttonWidth), startCoords.y}, 
+			{startCoords.x + (j * buttonWidth) + buttonWidth, startCoords.y + buttonHeight});
+			DrawButtonOverlay(buttons, j, dest);
+		}
 	}
 }
 
